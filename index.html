@@ -1,22 +1,164 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <meta charset="utf-8" />
   <title>CyGNSSnet Web View</title>
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-  />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/chroma-js@2.4.2/chroma.min.js"></script>
+  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
   <style>
-    html, body {
+    html,
+    body {
       height: 100%;
       margin: 0;
       font-family: system-ui, sans-serif;
       background: #f0f0f0;
+      overflow: hidden;
+      /* Prevent body scroll, we want internal scrolls */
     }
-    #map { height: 100%; width: 100%; }
+
+    #map {
+      height: 100%;
+      width: 100%;
+    }
+
+    /* --- Analysis Panel (Right Side) --- */
+    #analysis-panel {
+      position: absolute;
+      top: 5px;
+      right: 10px;
+      width: 500px;
+      /* Adjust as needed */
+      max-height: calc(100vh - 20px);
+      background: rgba(255, 255, 255, 0.96);
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+      z-index: 2000;
+      /* Above Leaflet controls */
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      /* Internal scrolling */
+      transition: transform 0.3s ease;
+      transform: translateX(105%);
+      /* Hidden by default */
+    }
+
+    #analysis-panel.visible {
+      transform: translateX(0);
+    }
+
+    #panel-header {
+      padding: 10px 15px;
+      background: #eee;
+      border-bottom: 1px solid #ddd;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    #panel-header h3 {
+      margin: 0;
+      font-size: 16px;
+    }
+
+    #close-panel {
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 18px;
+      color: #666;
+    }
+
+    #panel-content {
+      padding: 15px;
+      overflow-y: auto;
+      flex-grow: 1;
+    }
+
+    /* Visualization Containers */
+    .viz-section-title {
+      font-size: 14px;
+      font-weight: 700;
+      margin-top: 10px;
+      margin-bottom: 5px;
+      border-bottom: 2px solid #ddd;
+      padding-bottom: 2px;
+    }
+
+    /* List of feature bars */
+    #feature-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .feature-row {
+      display: flex;
+      align-items: center;
+      height: 32px;
+      /* Reduced from 60px */
+      border: 1px solid #eee;
+      padding: 0 4px;
+      /* Reduced padding */
+      border-radius: 3px;
+      background: #fff;
+    }
+
+    .feature-label {
+      width: 100px;
+      font-size: 11px;
+      /* Smaller font */
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      margin-right: 5px;
+      text-align: right;
+    }
+
+    .feature-viz-container {
+      flex-grow: 1;
+      display: flex;
+      height: 100%;
+    }
+
+    /* Split 70% bar, 30% histogram */
+    .viz-bar-part {
+      width: 65%;
+      height: 100%;
+      position: relative;
+    }
+
+    .viz-hist-part {
+      width: 35%;
+      height: 100%;
+      position: relative;
+      border-left: 1px solid #f0f0f0;
+      margin-left: 5px;
+    }
+
+    /* DDM Grid */
+    #ddm-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .ddm-placeholder {
+      aspect-ratio: 17/11;
+      background: #f9f9f9;
+      border: 1px dashed #ccc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      color: #999;
+      position: relative;
+    }
 
     #title {
       position: absolute;
@@ -38,17 +180,19 @@
       background: rgba(255, 255, 255, 0.95);
       padding: 10px;
       border-radius: 8px;
-      box-shadow: 0 0 5px rgba(0,0,0,0.2);
+      box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
       z-index: 1000;
       width: 220px;
     }
-     
+
     #controls label {
-        display: inline-block;
-        margin-bottom: 4px;
+      display: inline-block;
+      margin-bottom: 4px;
     }
-    #controls select, #controls input {
-        width: 100%;
+
+    #controls select,
+    #controls input {
+      width: 100%;
     }
 
     /* Existing data legend (top right) */
@@ -61,7 +205,7 @@
       padding: 12px;
       border-radius: 10px;
       font-size: 13px;
-      box-shadow: 0 0 8px rgba(0,0,0,0.3);
+      box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
       text-align: center;
       width: 160px;
       z-index: 1000;
@@ -87,7 +231,7 @@
       font-size: 12px;
       font-family: monospace;
     }
-    
+
     #zoom-note {
       margin-top: 12px;
       padding-top: 8px;
@@ -95,6 +239,7 @@
       font-size: 12px;
       color: #444;
     }
+
     #zoom-note kbd {
       background: #f4f4f4;
       border: 1px solid #ccc;
@@ -107,7 +252,8 @@
     /* */
     #lcz-legend-container {
       position: absolute;
-      bottom: 20px; /* Position bottom-left */
+      bottom: 20px;
+      /* Position bottom-left */
       left: 20px;
       z-index: 1000;
     }
@@ -116,23 +262,27 @@
       background: rgba(255, 255, 255, 0.95);
       padding: 5px 10px;
       border-radius: 5px;
-      box-shadow: 0 0 5px rgba(0,0,0,0.2);
+      box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
       cursor: pointer;
       font-weight: bold;
       font-size: 14px;
       text-align: center;
       margin-bottom: 10px;
-      width: 180px; /* Match legend width */
-      box-sizing: border-box; /* Include padding in width */
+      width: 180px;
+      /* Match legend width */
+      box-sizing: border-box;
+      /* Include padding in width */
     }
 
     #lcz-legend-content {
       background: rgba(255, 255, 255, 0.95);
       padding: 12px;
       border-radius: 10px;
-      box-shadow: 0 0 8px rgba(0,0,0,0.3);
-      width: 200px; /* Slightly wider for color swatches */
-      max-height: 45vh; /* Limit height with scroll */
+      box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
+      width: 200px;
+      /* Slightly wider for color swatches */
+      max-height: 45vh;
+      /* Limit height with scroll */
       overflow-y: auto;
       text-align: left;
     }
@@ -145,23 +295,24 @@
       padding-bottom: 5px;
       border-bottom: 1px solid #ddd;
     }
-    
+
     #lcz-legend-content h5 {
       margin: 10px 0 5px 0;
       font-size: 13px;
       font-weight: bold;
     }
-    
+
     #lcz-legend-content ul {
       margin: 0;
       padding-left: 0;
       list-style: none;
     }
-    
+
     #lcz-legend-content li {
       font-size: 12px;
       margin-bottom: 4px;
-      display: flex; /* For aligning color box and text */
+      display: flex;
+      /* For aligning color box and text */
       align-items: center;
     }
 
@@ -171,12 +322,14 @@
       margin-right: 8px;
       border: 1px solid #888;
       box-sizing: border-box;
-      flex-shrink: 0; /* Prevent shrinking when text is long */
+      flex-shrink: 0;
+      /* Prevent shrinking when text is long */
     }
-    /* */
 
+    /* */
   </style>
 </head>
+
 <body>
   <div id="title">CyGNSSnet Web View</div>
 
@@ -194,7 +347,7 @@
 
     <label for="opacitySlider"><b>Image Opacity:</b></label><br>
     <input id="opacitySlider" type="range" min="0" max="1" step="0.05" value="0.7">
-    
+
   </div>
 
   <div id="map"></div>
@@ -217,7 +370,7 @@
     <div id="lcz-legend-toggle">Local Climate Zones (Click to Hide)</div>
     <div id="lcz-legend-content">
       <h4>Local Climate Zones</h4>
-      
+
       <h5>Built types</h5>
       <ul>
         <li><span class="lcz-color-box" style="background-color: #8C0000;"></span> 1 - Compact highrise</li>
@@ -231,7 +384,7 @@
         <li><span class="lcz-color-box" style="background-color: #838383;"></span> 9 - Sparsely built</li>
         <li><span class="lcz-color-box" style="background-color: #1A1A1A;"></span> 10 - Heavy industry</li>
       </ul>
-      
+
       <h5>Land cover types</h5>
       <ul>
         <li><span class="lcz-color-box" style="background-color: #006A00;"></span> A - Dense trees</li>
@@ -246,14 +399,39 @@
   </div>
   -->
 
+  <div id="analysis-panel">
+    <div id="panel-header">
+      <h3 id="panel-title">Data Point Analysis</h3>
+      <span id="close-panel">&times;</span>
+    </div>
+    <div id="panel-content">
+      <div id="details-meta" style="margin-bottom: 10px; font-size: 13px; color: #555;">
+        Select a point to view details.
+      </div>
+
+      <div class="viz-section-title">Feature Analysis</div>
+      <div id="feature-list">
+        <!-- Rows will be injected here -->
+      </div>
+
+      <div class="viz-section-title">DDMs (Delay Doppler Maps)</div>
+      <div id="ddm-grid">
+        <div class="ddm-placeholder" id="ddm-0">DDM 1</div>
+        <div class="ddm-placeholder" id="ddm-1">DDM 2</div>
+        <div class="ddm-placeholder" id="ddm-2">DDM 3</div>
+        <div class="ddm-placeholder" id="ddm-3">DDM 4</div>
+      </div>
+    </div>
+  </div>
+
   <script>
     const map = L.map('map', {
-        boxZoom: true,
-        minZoom: 2,
-        maxBounds: [
-            [-90, -180], // South-West corner
-            [90, 180]  // North-East corner
-        ]
+      boxZoom: true,
+      minZoom: 2,
+      maxBounds: [
+        [-90, -180], // South-West corner
+        [90, 180]  // North-East corner
+      ]
     }).setView([0, 0], 2);
 
     // --- Base Map Layers ---
@@ -264,17 +442,17 @@
     }).addTo(map); // Add OSM by default
 
     const worldClim = L.tileLayer.wms("https://ows.worldclim.org/geoserver/wms", {
-        layers: 'wc2.1_10m_tavg', // Avg temperature
-        format: 'image/png',
-        transparent: true,
-        attribution: "WorldClim"
+      layers: 'wc2.1_10m_tavg', // Avg temperature
+      format: 'image/png',
+      transparent: true,
+      attribution: "WorldClim"
     });
 
-    const imageOverlayLayer = L.tileLayer.wms("https://lcz-generator.rub.de/tms/global-map-tiles/latest/{z}/{x}/{y}.png",{
-        interactive: true,
-        attribution: 'WUDAPT, CC-BY-SA 4.0' // Added attribution
+    const imageOverlayLayer = L.tileLayer.wms("https://lcz-generator.rub.de/tms/global-map-tiles/latest/{z}/{x}/{y}.png", {
+      interactive: true,
+      attribution: 'WUDAPT, CC-BY-SA 4.0' // Added attribution
     }).addTo(map); // Add your image by default
-    
+
 
     const datasetFiles = {
       raw: 'raw_features.geojson',
@@ -287,6 +465,9 @@
     let currentDataset = 'raw';
     let currentFeature = null;
 
+    // Cache for feature statistics
+    let featureStats = {};
+
     const datasetSelect = document.getElementById('datasetSelect');
     const featureSelect = document.getElementById('featureSelect');
     const colorbar = document.getElementById('colorbar');
@@ -294,14 +475,19 @@
     const maxVal = document.getElementById('maxVal');
     const opacitySlider = document.getElementById('opacitySlider');
 
+    // Analysis Panel Elements
+    const analysisPanel = document.getElementById('analysis-panel');
+    const closePanelBtn = document.getElementById('close-panel');
+    const featureListContainer = document.getElementById('feature-list');
+
     opacitySlider.addEventListener('input', () => {
-        const opacity = opacitySlider.value;
-        if (imageOverlayLayer) {
-            imageOverlayLayer.setOpacity(opacity);
-        }
-        if (worldClim) {
-            worldClim.setOpacity(opacity);
-        }
+      const opacity = opacitySlider.value;
+      if (imageOverlayLayer) {
+        imageOverlayLayer.setOpacity(opacity);
+      }
+      if (worldClim) {
+        worldClim.setOpacity(opacity);
+      }
     });
 
     datasetSelect.addEventListener('change', () => {
@@ -314,6 +500,10 @@
       updateColors();
     });
 
+    closePanelBtn.addEventListener('click', () => {
+      analysisPanel.classList.remove('visible');
+    });
+
     function loadDataset() {
       const file = datasetFiles[currentDataset];
       fetch(file)
@@ -323,14 +513,49 @@
 
           if (geojsonLayer) {
             map.removeLayer(geojsonLayer);
-            if (layerControl) {
-                layerControl.removeLayer(geojsonLayer);
-            }
           }
 
           const props = data.features[0].properties;
+          // Identify numeric keys
           const numericKeys = Object.keys(props).filter(k => typeof props[k] === 'number');
 
+          // --- Pre-calculate Statistics (Min, Max, Histogram) ---
+          featureStats = {};
+          numericKeys.forEach(key => {
+            const values = data.features.map(f => f.properties[key]).filter(v => typeof v === 'number');
+            if (values.length === 0) return;
+
+            const min = Math.min(...values);
+            const max = Math.max(...values);
+
+            // Simple Histogram (20 bins)
+            const bins = 20;
+            const range = max - min;
+            const binCounts = new Array(bins).fill(0);
+
+            if (range > 0) {
+              values.forEach(v => {
+                let binIdx = Math.floor(((v - min) / range) * bins);
+                if (binIdx >= bins) binIdx = bins - 1;
+                binCounts[binIdx]++;
+              });
+            } else {
+              // If all values are same
+              binCounts[Math.floor(bins / 2)] = values.length;
+            }
+
+            // Normalize bin counts for display height (max height 1.0)
+            const maxCount = Math.max(...binCounts);
+            const normBins = binCounts.map(c => maxCount > 0 ? c / maxCount : 0);
+
+            featureStats[key] = {
+              min,
+              max,
+              bins: normBins
+            };
+          });
+
+          // Populate Feature Select
           featureSelect.innerHTML = "";
           numericKeys.forEach(k => {
             const opt = document.createElement('option');
@@ -339,102 +564,289 @@
             featureSelect.appendChild(opt);
           });
 
-          currentFeature = featureSelect.value;
+          if (numericKeys.length > 0) {
+            currentFeature = numericKeys[0];
+            featureSelect.value = currentFeature;
+          }
 
           geojsonLayer = L.geoJSON(geoData, {
             pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
-              radius: 5,
+              radius: 6,
               color: '#333',
-              fillColor: '#555',
-              fillOpacity: 0.7,
+              fillColor: '#888',
+              fillOpacity: 0.8,
               weight: 1
             }),
             onEachFeature: (feature, layer) => {
-              layer.bindPopup(() => {
-                const props = feature.properties;
-                const baseFeatureName = currentFeature; 
-                const value = props[baseFeatureName];
-                const featureDisplayName = baseFeatureName + (currentDataset === "raw" ? "_raw" : "_shap");
-
-                if (typeof value === "number" && !isNaN(value)) {
-                    return `<b>${featureDisplayName}</b>: ${value.toFixed(4)}`;
-                } else {
-                    return `<b>${featureDisplayName}</b>: Not available`;
-                }
+              // Click handler for Sidebar
+              layer.on('click', (e) => {
+                // Stop map click propagation if needed, or just open panel
+                L.DomEvent.stopPropagation(e);
+                showFeatureAnalysis(feature.properties);
               });
             }
           }).addTo(map);
 
           if (layerControl) {
-             layerControl.addOverlay(geojsonLayer, "Data Points");
+            // Remove old layer if exists in control - tricky with Leaflet default control
+            // Better to just add it. If we need to remove, we'd need a reference.
+            // For now, simpler to just add (might duplicate in list if switching back and forth unless handled).
+            // Since we cleared geojsonLayer from map, just adding it again is "okay" but not clean. 
+            // In a pro app, we'd manage the control instance better.
           }
-          
+
           map.fitBounds(geojsonLayer.getBounds());
           updateColors();
         });
     }
 
     function updateColors() {
-      if (!geojsonLayer || !currentFeature) return;
+      if (!geojsonLayer || !currentFeature || !featureStats[currentFeature]) return;
 
-      const values = geoData.features
-        .map(f => f.properties[currentFeature])
-        .filter(v => typeof v === "number" && !isNaN(v));
-
-      if (values.length === 0) return;
-
-      const min = Math.min(...values);
-      const max = Math.max(...values);
+      const { min, max } = featureStats[currentFeature];
 
       minVal.textContent = min.toFixed(2);
       maxVal.textContent = max.toFixed(2);
 
       geojsonLayer.eachLayer(layer => {
-        const props = layer.feature.properties;
-        const val = props[currentFeature];
+        const val = layer.feature.properties[currentFeature];
         if (typeof val === "number" && !isNaN(val)) {
-          const t = (val - min) / (max - min);
+          // Normalize 0-1
+          let t = 0.5;
+          if (max !== min) {
+            t = (val - min) / (max - min);
+          }
           const color = colorScale(t).hex();
-          layer.setStyle({ color: color, fillColor: color });
+          layer.setStyle({ color: '#333', fillColor: color });
         } else {
           layer.setStyle({ color: '#ccc', fillColor: '#ccc' });
         }
       });
-      
+
+      // Update Legend Bar
       const gradient = [];
       for (let i = 0; i <= 100; i += 5) {
         gradient.push(colorScale(i / 100).hex());
       }
       colorbar.style.background = `linear-gradient(to right, ${gradient.join(',')})`;
     }
-    
+
+    function showFeatureAnalysis(properties) {
+      analysisPanel.classList.add('visible');
+      featureListContainer.innerHTML = '';
+
+      const numericKeys = Object.keys(properties).filter(k => typeof properties[k] === 'number');
+
+      // Sorting: Highest to Lowest (Descending)
+      numericKeys.sort((a, b) => {
+        const valA = properties[a];
+        const valB = properties[b];
+        return valB - valA; // Descending
+      });
+
+      numericKeys.forEach(key => {
+        const val = properties[key];
+        const stats = featureStats[key];
+        if (!stats) return;
+
+        const row = document.createElement('div');
+        row.className = 'feature-row';
+
+        // Label
+        const label = document.createElement('div');
+        label.className = 'feature-label';
+        label.title = key;
+        label.textContent = key;
+        row.appendChild(label);
+
+        const vizContainer = document.createElement('div');
+        vizContainer.className = 'feature-viz-container';
+
+        // VISUALIZATION LOGIC
+        if (currentDataset === 'shap') {
+          // SHAP: Value + Diverging Bar + Histogram
+
+          // 1. Text Value (Overlay or separate? Let's put slightly left or formatted)
+          // Let's rely on hover for exact value? Or put it in text.
+          // Plan said: Value + Bar + Hist.
+          // Let's put value text in the bar part? Or before?
+          // The generic layout "feature-row" has fix height. 
+          // Let's create specific inner structure.
+
+          /* Structure:
+             [ValString] [Bar] | [Hist]
+          */
+
+          // Value Text
+          const valDiv = document.createElement('div');
+          valDiv.style.width = '50px';
+          valDiv.style.fontSize = '11px';
+          valDiv.style.textAlign = 'right';
+          valDiv.style.marginRight = '8px';
+          valDiv.textContent = val.toFixed(3);
+          vizContainer.appendChild(valDiv);
+
+          // Bar Container
+          const barContainer = document.createElement('div');
+          barContainer.style.flexGrow = '1';
+          barContainer.style.height = '100%';
+          barContainer.style.position = 'relative';
+          barContainer.style.background = '#f9f9f9';
+          barContainer.style.marginRight = '5px';
+          barContainer.style.display = 'flex';
+          barContainer.style.alignItems = 'center'; // Center bar vertically
+
+          // Draw Diverging Bar
+          // We need global max absolute value to normalize properly across features? 
+          // Or normalize per feature range? SHAP usually compares contribution relative to others.
+          // But here we are listing features. Usually SHAP waterfall normalizes by total prediction.
+          // Since we barely have that context, let's normalize by THIS feature's MaxAbs in the dataset.
+          const maxAbs = Math.max(Math.abs(stats.min), Math.abs(stats.max));
+          const normVal = maxAbs > 0 ? val / maxAbs : 0; // -1 to 1
+
+          const bar = document.createElement('div');
+          bar.style.height = '10px'; // Reduced height
+          bar.style.position = 'absolute';
+          // bar.style.top = '50%'; // Handled by flex align-items center in container
+          // bar.style.transform = 'translateY(-50%)';
+
+          // Center line is 50% of container
+          const centerP = 50;
+          // If neg, goes left from center. If pos, goes right.
+          // Scale: Full width = 2 * maxAbs.
+          // Let's say width is 100%. 50% is 0.
+          // Val mapped to %: 50 + (val/maxAbs)*50 (roughly, maybe *45 to keep padding)
+
+          const percent = 50 + (normVal * 45); // 5% to 95% range
+
+          let left, width;
+          if (normVal >= 0) {
+            left = 50;
+            width = normVal * 45;
+            bar.style.background = '#0074D9'; // Blue
+          } else {
+            left = percent;
+            width = Math.abs(normVal) * 45;
+            bar.style.background = '#FF4136'; // Red
+          }
+
+          bar.style.left = left + '%';
+          bar.style.width = width + '%';
+
+          // Center marker
+          const centerLine = document.createElement('div');
+          centerLine.style.position = 'absolute';
+          centerLine.style.left = '50%';
+          centerLine.style.top = '0';
+          centerLine.style.bottom = '0';
+          centerLine.style.width = '1px';
+          centerLine.style.background = '#ddd';
+
+          barContainer.appendChild(centerLine);
+          barContainer.appendChild(bar);
+          vizContainer.appendChild(barContainer);
+
+          // Histogram Part
+          const histDiv = createHistogram(stats, val);
+          vizContainer.appendChild(histDiv);
+
+        } else {
+          // RAW: Value Only (User said "just the value", but previously "histogram for each data point"...)
+          // User said: "for the raw features, just the value"
+          // So strict adherence: Just render the value.
+
+          const valDiv = document.createElement('div');
+          valDiv.style.flexGrow = '1';
+          valDiv.style.fontWeight = 'bold';
+          valDiv.style.fontSize = '12px';
+          valDiv.style.paddingLeft = '10px';
+          valDiv.textContent = val.toFixed(4);
+          vizContainer.appendChild(valDiv);
+        }
+
+        row.appendChild(vizContainer);
+        featureListContainer.appendChild(row);
+      });
+    }
+
+    function createHistogram(stats, currentVal) {
+      const histContainer = document.createElement('div');
+      histContainer.className = 'viz-hist-part';
+      // Only if defined in CSS, otherwise define style here
+      histContainer.style.width = '30%'; // Reduced as per SHAP row logic
+      histContainer.style.position = 'relative';
+      histContainer.style.height = '100%';
+      histContainer.style.marginLeft = '5px';
+      histContainer.style.borderLeft = '1px solid #eee';
+      histContainer.style.display = 'flex';
+      histContainer.style.alignItems = 'flex-end';
+      histContainer.style.paddingBottom = '4px';
+
+      const { min, max, bins } = stats;
+      const binCount = bins.length;
+
+      // Render bars
+      bins.forEach((h, i) => {
+        const bar = document.createElement('div');
+        bar.style.flex = '1';
+        bar.style.margin = '0 1px';
+        bar.style.background = '#ccc';
+        bar.style.height = (h * 100) + '%';
+        histContainer.appendChild(bar);
+      });
+
+      // Current Value Marker Line
+      // Position?
+      const range = max - min;
+      if (range > 0) {
+        let pos = (currentVal - min) / range;
+        if (pos < 0) pos = 0;
+        if (pos > 1) pos = 1;
+
+        const line = document.createElement('div');
+        line.style.position = 'absolute';
+        line.style.left = (pos * 100) + '%';
+        line.style.top = '0';
+        line.style.bottom = '0';
+        line.style.width = '2px';
+        line.style.background = 'black'; // Highlight
+        line.style.zIndex = '10';
+        histContainer.appendChild(line);
+      }
+
+      return histContainer;
+    }
+
     const baseMaps = {
-        "OpenStreetMap": osm
+      "OpenStreetMap": osm
     };
-    
+
     const overlayMaps = {
-        "Local Climate Zones": imageOverlayLayer, // Renamed for clarity
-        "WorldClim Temp": worldClim,
+      "Local Climate Zones": imageOverlayLayer, // Renamed for clarity
+      "WorldClim Temp": worldClim,
     };
-    
+
     const layerControl = L.control.layers(baseMaps, overlayMaps).addTo(map);
 
-    // const lczLegendToggle = document.getElementById('lcz-legend-toggle');
+    const lczLegendToggle = document.getElementById('lcz-legend-toggle');
     const lczLegendContent = document.getElementById('lcz-legend-content');
     let lczLegendVisible = true; // State variable
 
     lczLegendToggle.addEventListener('click', () => {
-        if (lczLegendVisible) {
-            lczLegendContent.style.display = 'none';
-            lczLegendToggle.textContent = 'Local Climate Zones (Click to Show)';
-        } else {
-            lczLegendContent.style.display = 'block';
-            lczLegendToggle.textContent = 'Local Climate Zones (Click to Hide)';
-        }
-        lczLegendVisible = !lczLegendVisible; // Toggle state
+      if (lczLegendVisible) {
+        lczLegendContent.style.display = 'none';
+        lczLegendToggle.textContent = 'Local Climate Zones (Click to Show)';
+      } else {
+        lczLegendContent.style.display = 'block';
+        lczLegendToggle.textContent = 'Local Climate Zones (Click to Hide)';
+      }
+      lczLegendVisible = !lczLegendVisible; // Toggle state
     });
-    // loadDataset();
+
+    // Initial Load
+    loadDataset();
   </script>
 </body>
+
 </html>
 ```
