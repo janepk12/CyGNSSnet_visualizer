@@ -387,6 +387,47 @@
       border: 1px solid rgba(0, 0, 0, 0.1);
       border-radius: 2px;
     }
+
+    /* Regional SHAP Summary Modal */
+    #shap-summary-modal {
+      display: none;
+      position: fixed;
+      z-index: 3000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+    }
+
+    #shap-summary-content {
+      background: #fff;
+      margin: 3% auto;
+      padding: 20px;
+      width: 85%;
+      height: 90vh;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .modal-close {
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+      color: #aaa;
+    }
+
+    .modal-close:hover {
+      color: #000;
+    }
+
+    #shap-plot-area {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+    }
   </style>
 </head>
 
@@ -418,6 +459,12 @@
         <input type="checkbox" id="highlightDDM" style="width: auto; margin-right: 8px; margin-bottom: 0;">
         Highlight DDM Points
       </label>
+    </div>
+
+    <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee;">
+      <button id="calc-shap-summary"
+        style="width: 100%; padding: 8px; background: #28a745; color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer;">Calculate
+        Regional SHAP Summary</button>
     </div>
   </div>
 
@@ -465,6 +512,13 @@
         <li><span class="lcz-color-box" style="background-color: #7AA2F9;"></span> G - Water</li>
       </ul>
     </div>
+  </div>
+
+  <div id="shap-modal-overlay"></div>
+  <div id="shap-summary-modal">
+    <span class="modal-close" id="close-shap-modal">&times;</span>
+    <h2 style="margin: 0 0 15px 0;">Regional SHAP Summary</h2>
+    <div id="shap-plot-area"></div>
   </div>
 
   <div id="analysis-panel">
@@ -1093,6 +1147,132 @@
 
     // Initial Load
     loadDataset();
+
+    // ========== REGIONAL SHAP SUMMARY PLOT ==========
+    (function () {
+      const btn = document.getElementById('calc-shap-summary');
+      const modal = document.getElementById('shap-summary-modal');
+      const overlay = document.getElementById('shap-modal-overlay');
+      const plotArea = document.getElementById('shap-plot-area');
+      const closeBtn = document.getElementById('close-shap-modal');
+      let rawCache = null, shapCache = null;
+
+      // Close modal handlers
+      closeBtn.addEventListener('click', function () {
+        modal.style.display = 'none';
+        overlay.style.display = 'none';
+      });
+
+      overlay.addEventListener('click', function () {
+        modal.style.display = 'none';
+        overlay.style.display = 'none';
+      });
+
+      btn.addEventListener('click', async function () {
+        modal.style.display = 'block';
+        overlay.style.display = 'block';
+        plotArea.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:1.2em;">Loading...</div>';
+
+        try {
+          // Load both datasets if not cached
+          if (!rawCache) rawCache = await fetch('raw_features.geojson').then(r => r.json());
+          if (!shapCache) shapCache = await fetch('shap_features.geojson').then(r => r.json());
+
+          const bounds = map.getBounds();
+          const indices = [];
+
+          // Filter by map bounds
+          rawCache.features.forEach((f, i) => {
+            const [lng, lat] = f.geometry.coordinates;
+            if (lat >= bounds.getSouth() && lat <= bounds.getNorth()) {
+              let testLng = lng;
+              while (testLng < bounds.getWest()) testLng += 360;
+              while (testLng > bounds.getEast()) testLng -= 360;
+              if (testLng >= bounds.getWest() && testLng <= bounds.getEast()) {
+                indices.push(i);
+              }
+            }
+          });
+
+          if (indices.length === 0) {
+            plotArea.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;flex-direction:column;"><h3>No data in view</h3><p>Zoom out or pan to include data points</p></div>';
+            return;
+          }
+
+          // Calculate feature importance
+          const features = Object.keys(rawCache.features[0].properties).filter(k => typeof rawCache.features[0].properties[k] === 'number' && !k.startsWith('_'));
+          const importances = [];
+
+          features.forEach(feat => {
+            const shapVals = indices.map(i => shapCache.features[i].properties[feat]);
+            if (shapVals.some(v => v === undefined)) return;
+            const meanAbs = shapVals.reduce((s, v) => s + Math.abs(v), 0) / shapVals.length;
+            const rawVals = indices.map(i => rawCache.features[i].properties[feat]);
+            importances.push({ feat, shapVals, rawVals, meanAbs });
+          });
+
+          importances.sort((a, b) => b.meanAbs - a.meanAbs);
+          const top20 = importances.slice(0, 20);
+
+          // Prepare plot data
+          const xData = [], yData = [], colors = [], texts = [];
+          const colorScale = chroma.scale(['#0074D9', '#ffffff', '#FF4136']).mode('lab'); // shap colors
+
+          top20.forEach(({ feat, shapVals, rawVals }) => {
+            const rMin = Math.min(...rawVals);
+            const rMax = Math.max(...rawVals);
+            const rRange = rMax - rMin || 1;
+            shapVals.forEach((s, idx) => {
+              xData.push(s);
+              yData.push(feat);
+              colors.push(colorScale((rawVals[idx] - rMin) / rRange).hex());
+              texts.push(`${feat}<br>SHAP: ${s.toFixed(4)}<br>Raw: ${rawVals[idx].toFixed(4)}`);
+            });
+          });
+
+          // Render with Plotly - scatter plot to show all points
+          const trace = {
+            type: 'scatter',
+            mode: 'markers',
+            x: xData,
+            y: yData,
+            marker: {
+              color: colors,
+              size: 8,
+              opacity: 0.6,
+              line: { width: 1, color: 'white' }
+            },
+            text: texts,
+            hoverinfo: 'text'
+          };
+
+          const layout = {
+            title: `Regional SHAP Summary (${indices.length} points, Top 20 features)`,
+            xaxis: {
+              title: 'SHAP Value',
+              zeroline: true,
+              zerolinecolor: '#999'
+            },
+            yaxis: {
+              title: 'Features',
+              type: 'category',
+              categoryorder: 'array',
+              categoryarray: top20.map(d => d.feat).reverse()
+            },
+            height: Math.max(600, top20.length * 35),
+            margin: { l: 150, r: 20, t: 50, b: 50 },
+            hovermode: 'closest'
+          };
+
+          plotArea.innerHTML = '';
+          Plotly.newPlot(plotArea, [trace], layout, { responsive: true });
+
+        } catch (e) {
+          plotArea.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:red;">Error: ${e.message}</div>`;
+          console.error(e);
+        }
+      });
+    })();
 
   </script>
 </body>
