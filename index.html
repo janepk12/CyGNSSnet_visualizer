@@ -13,37 +13,33 @@
     body {
       height: 100%;
       margin: 0;
-      font-family: system-ui, sans-serif;
+      font-family: system-ui, -apple-system, sans-serif;
       background: #f0f0f0;
       overflow: hidden;
-      /* Prevent body scroll, we want internal scrolls */
     }
 
     #map {
       height: 100%;
       width: 100%;
+      z-index: 1;
     }
 
     /* --- Analysis Panel (Right Side) --- */
     #analysis-panel {
       position: absolute;
-      top: 5px;
+      top: 10px;
       right: 10px;
-      width: 500px;
-      /* Adjust as needed */
+      width: 480px;
       max-height: calc(100vh - 20px);
-      background: rgba(255, 255, 255, 0.96);
+      background: rgba(255, 255, 255, 0.98);
       border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
       z-index: 2000;
-      /* Above Leaflet controls */
       display: flex;
       flex-direction: column;
-      overflow: hidden;
-      /* Internal scrolling */
-      transition: transform 0.3s ease;
-      transform: translateX(105%);
-      /* Hidden by default */
+      transform: translateX(110%);
+      transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+      border: 1px solid #ddd;
     }
 
     #analysis-panel.visible {
@@ -51,282 +47,346 @@
     }
 
     #panel-header {
-      padding: 10px 15px;
-      background: #eee;
-      border-bottom: 1px solid #ddd;
+      padding: 12px 15px;
+      background: #f8f9fa;
+      border-bottom: 1px solid #eee;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      flex-shrink: 0;
+      border-radius: 8px 8px 0 0;
     }
 
     #panel-header h3 {
       margin: 0;
-      font-size: 16px;
+      font-size: 15px;
+      color: #333;
+      font-weight: 600;
     }
 
     #close-panel {
       cursor: pointer;
-      font-weight: bold;
-      font-size: 18px;
-      color: #666;
+      font-size: 20px;
+      color: #999;
+      line-height: 1;
+    }
+
+    #close-panel:hover {
+      color: #333;
     }
 
     #panel-content {
-      padding: 15px;
+      padding: 0;
       overflow-y: auto;
       flex-grow: 1;
     }
 
-    /* Visualization Containers */
-    .viz-section-title {
-      font-size: 14px;
+    .section-header {
+      padding: 10px 15px;
+      background: #fafafa;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #777;
       font-weight: 700;
-      margin-top: 10px;
-      margin-bottom: 5px;
-      border-bottom: 2px solid #ddd;
-      padding-bottom: 2px;
+      border-bottom: 1px solid #eee;
+      border-top: 1px solid #eee;
     }
 
-    /* List of feature bars */
-    #feature-list {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
+    .section-header:first-child {
+      border-top: none;
     }
 
-    .feature-row {
-      display: flex;
-      align-items: center;
-      height: 32px;
-      /* Reduced from 60px */
-      border: 1px solid #eee;
-      padding: 0 4px;
-      /* Reduced padding */
-      border-radius: 3px;
+    /* --- Compact Table Styling for Features --- */
+    .analysis-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    .analysis-table th {
+      text-align: left;
+      padding: 8px 12px;
       background: #fff;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      border-bottom: 2px solid #eee;
+      color: #555;
+      font-weight: 600;
     }
 
-    .feature-label {
-      width: 100px;
-      font-size: 11px;
-      /* Smaller font */
+    .analysis-table td {
+      padding: 4px 12px;
+      border-bottom: 1px solid #f5f5f5;
+      color: #333;
+    }
+
+    .analysis-table tr:hover {
+      background-color: #f8f9fa;
+    }
+
+    .col-name {
+      width: 35%;
       font-weight: 500;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      margin-right: 5px;
+    }
+
+    .col-val {
+      width: 20%;
+      font-family: monospace;
       text-align: right;
     }
 
-    .feature-viz-container {
-      flex-grow: 1;
+    .col-viz {
+      width: 45%;
+    }
+
+    /* Histogram Bars in Table */
+    .viz-container {
+      width: 100%;
+      height: 24px;
       display: flex;
-      height: 100%;
-    }
-
-    /* Split 70% bar, 30% histogram */
-    .viz-bar-part {
-      width: 65%;
-      height: 100%;
+      align-items: flex-end;
       position: relative;
     }
 
-    .viz-hist-part {
-      width: 35%;
-      height: 100%;
-      position: relative;
-      border-left: 1px solid #f0f0f0;
-      margin-left: 5px;
+    .hist-bar {
+      flex: 1;
+      background: #e0e0e0;
+      margin: 0 1px;
+      transition: height 0.2s;
+      min-width: 2px;
     }
 
-    /* DDM Grid */
-    #ddm-grid {
+    .val-marker {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: #000;
+      z-index: 2;
+      box-shadow: 0 0 2px rgba(255, 255, 255, 1);
+    }
+
+    /* --- DDM Grid --- */
+    #ddm-container {
+      padding: 15px;
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 10px;
-      margin-top: 15px;
+      background: #fff;
     }
 
-    .ddm-placeholder {
-      aspect-ratio: 17/11;
-      background: #f9f9f9;
-      border: 1px dashed #ccc;
+    .ddm-box {
+      background: #fff;
+      border: 1px solid #eee;
+      border-radius: 4px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      image-rendering: pixelated;
+      /* Standard */
+      image-rendering: crisp-edges;
+      /* Firefox */
+    }
+
+    .ddm-box canvas {
+      /* Force the canvas to fill the box while maintaining pixelation */
+      width: 100%;
+      height: 100%;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+
+    .ddm-box-title {
+      position: absolute;
+      top: 5px;
+      left: 5px;
+      font-size: 10px;
+      font-weight: bold;
+      color: #333;
+      background: rgba(255, 255, 255, 0.9);
+      padding: 2px 4px;
+      border-radius: 3px;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    .ddm-placeholder-art {
+      width: 100%;
+      height: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 12px;
-      color: #999;
-      position: relative;
+      color: #aaa;
+      font-size: 10px;
+      text-align: center;
+      background: #fcfcfc;
     }
 
+    /* Plotly container adjustments */
+    .js-plotly-plot {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* --- Main UI Controls --- */
     #title {
       position: absolute;
-      top: 10px;
+      top: 15px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(255, 255, 255, 0.9);
-      padding: 8px 14px;
-      border-radius: 8px;
-      font-size: 20px;
-      font-weight: bold;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 18px;
+      font-weight: 700;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
       z-index: 1000;
+      pointer-events: none;
     }
 
     #controls {
       position: absolute;
       top: 60px;
       left: 10px;
-      background: rgba(255, 255, 255, 0.95);
-      padding: 10px;
+      background: rgba(255, 255, 255, 0.98);
+      padding: 15px;
       border-radius: 8px;
-      box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
       z-index: 1000;
-      width: 220px;
+      width: 240px;
     }
 
     #controls label {
-      display: inline-block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #444;
+      display: block;
       margin-bottom: 4px;
     }
 
     #controls select,
-    #controls input {
+    #controls input[type="range"] {
       width: 100%;
+      margin-bottom: 12px;
+      padding: 4px;
+      font-size: 13px;
     }
 
-    /* Existing data legend (top right) */
+    /* --- Legend --- */
     #legend {
       position: absolute;
       top: 50%;
       right: 20px;
       transform: translateY(-50%);
       background: rgba(255, 255, 255, 0.95);
-      padding: 12px;
-      border-radius: 10px;
-      font-size: 13px;
-      box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
-      text-align: center;
-      width: 160px;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      width: 140px;
       z-index: 1000;
     }
 
     #legend h4 {
-      margin: 0 0 6px 0;
-      font-size: 14px;
-      font-weight: 600;
+      margin: 0 0 10px 0;
+      font-size: 13px;
+      text-align: center;
+      color: #333;
     }
 
     #colorbar {
-      height: 14px;
-      width: 140px;
-      margin: 0 auto 8px auto;
-      border-radius: 4px;
-      border: 1px solid #aaa;
+      height: 12px;
+      width: 100%;
+      border-radius: 2px;
+      margin-bottom: 6px;
+      border: 1px solid rgba(0, 0, 0, 0.1);
     }
 
     .legend-values {
       display: flex;
       justify-content: space-between;
-      font-size: 12px;
+      font-size: 11px;
+      color: #555;
       font-family: monospace;
     }
 
     #zoom-note {
-      margin-top: 12px;
-      padding-top: 8px;
+      margin-top: 10px;
+      padding-top: 10px;
       border-top: 1px solid #eee;
-      font-size: 12px;
-      color: #444;
-    }
-
-    #zoom-note kbd {
-      background: #f4f4f4;
-      border: 1px solid #ccc;
-      border-radius: 3px;
-      padding: 1px 4px;
-      font-family: monospace;
       font-size: 11px;
+      color: #666;
+      line-height: 1.4;
     }
 
-    /* */
+    kbd {
+      background: #eee;
+      border-radius: 3px;
+      padding: 0 3px;
+      border: 1px solid #ccc;
+    }
+
+    /* --- LCZ Legend --- */
     #lcz-legend-container {
       position: absolute;
-      bottom: 20px;
-      /* Position bottom-left */
-      left: 20px;
+      bottom: 25px;
+      left: 10px;
       z-index: 1000;
     }
 
     #lcz-legend-toggle {
-      background: rgba(255, 255, 255, 0.95);
-      padding: 5px 10px;
-      border-radius: 5px;
-      box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+      background: rgba(255, 255, 255, 0.98);
+      padding: 8px 12px;
+      border-radius: 6px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
       cursor: pointer;
-      font-weight: bold;
-      font-size: 14px;
+      font-weight: 600;
+      font-size: 13px;
+      margin-bottom: 8px;
       text-align: center;
-      margin-bottom: 10px;
-      width: 180px;
-      /* Match legend width */
-      box-sizing: border-box;
-      /* Include padding in width */
     }
 
     #lcz-legend-content {
-      background: rgba(255, 255, 255, 0.95);
+      background: rgba(255, 255, 255, 0.98);
       padding: 12px;
-      border-radius: 10px;
-      box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
-      width: 200px;
-      /* Slightly wider for color swatches */
-      max-height: 45vh;
-      /* Limit height with scroll */
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      width: 220px;
+      max-height: 400px;
       overflow-y: auto;
-      text-align: left;
-    }
-
-    #lcz-legend-content h4 {
-      margin: 0 0 8px 0;
-      font-size: 14px;
-      font-weight: 600;
-      text-align: center;
-      padding-bottom: 5px;
-      border-bottom: 1px solid #ddd;
+      display: block;
     }
 
     #lcz-legend-content h5 {
-      margin: 10px 0 5px 0;
-      font-size: 13px;
-      font-weight: bold;
+      margin: 8px 0 4px 0;
+      font-size: 12px;
+      color: #444;
     }
 
     #lcz-legend-content ul {
-      margin: 0;
-      padding-left: 0;
       list-style: none;
+      padding: 0;
+      margin: 0;
     }
 
     #lcz-legend-content li {
-      font-size: 12px;
-      margin-bottom: 4px;
       display: flex;
-      /* For aligning color box and text */
       align-items: center;
+      margin-bottom: 4px;
+      font-size: 11px;
+      color: #333;
     }
 
     .lcz-color-box {
-      width: 18px;
-      height: 18px;
+      width: 14px;
+      height: 14px;
       margin-right: 8px;
-      border: 1px solid #888;
-      box-sizing: border-box;
-      flex-shrink: 0;
-      /* Prevent shrinking when text is long */
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      border-radius: 2px;
     }
-
-    /* */
   </style>
 </head>
 
@@ -334,20 +394,31 @@
   <div id="title">CyGNSSnet Web View</div>
 
   <div id="controls">
-    <label for="datasetSelect"><b>Dataset:</b></label><br>
+    <label for="datasetSelect">Dataset Source:</label>
     <select id="datasetSelect">
       <option value="raw">Raw Features</option>
       <option value="shap">SHAP Values</option>
     </select>
-    <br><br>
 
-    <label for="featureSelect"><b>Feature:</b></label><br>
+    <div id="datasetNotesContainer">
+      <label for="datasetNotes">Dataset Information:</label>
+      <textarea id="datasetNotes" rows="4"
+        style="width: 100%; font-size: 12px; padding: 4px; resize: vertical; font-family: inherit;"
+        placeholder=></textarea>
+    </div>
+
+    <label for="featureSelect">Select Feature:</label>
     <select id="featureSelect"></select>
-    <br><br>
 
-    <label for="opacitySlider"><b>Image Opacity:</b></label><br>
+    <label for="opacitySlider">Layer Opacity:</label>
     <input id="opacitySlider" type="range" min="0" max="1" step="0.05" value="0.7">
 
+    <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee;">
+      <label style="display: flex; align-items: center; cursor: pointer;">
+        <input type="checkbox" id="highlightDDM" style="width: auto; margin-right: 8px; margin-bottom: 0;">
+        Highlight DDM Points
+      </label>
+    </div>
   </div>
 
   <div id="map"></div>
@@ -355,23 +426,22 @@
   <div id="legend">
     <h4>Data Legend</h4>
     <div id="colorbar"></div>
-    <div class.legend-values">
+    <div class="legend-values">
       <span id="minVal">min</span>
       <span id="maxVal">max</span>
     </div>
 
     <div id="zoom-note">
-      <b>Tip:</b> Hold <kbd>Shift</kbd> + click and drag to zoom to an area.
+      <b>Tip:</b> <kbd>Shift</kbd> + Drag to zoom area.
     </div>
   </div>
 
-  -->
   <div id="lcz-legend-container">
-    <div id="lcz-legend-toggle">Local Climate Zones (Click to Hide)</div>
+    <div id="lcz-legend-toggle">Local Climate Zones (Hide)</div>
     <div id="lcz-legend-content">
-      <h4>Local Climate Zones</h4>
-
-      <h5>Built types</h5>
+      <div style="font-weight:bold; padding-bottom:5px; border-bottom:1px solid #ddd; margin-bottom:5px;">Legend Keys
+      </div>
+      <h5>Built Types</h5>
       <ul>
         <li><span class="lcz-color-box" style="background-color: #8C0000;"></span> 1 - Compact highrise</li>
         <li><span class="lcz-color-box" style="background-color: #D10000;"></span> 2 - Compact midrise</li>
@@ -384,20 +454,18 @@
         <li><span class="lcz-color-box" style="background-color: #838383;"></span> 9 - Sparsely built</li>
         <li><span class="lcz-color-box" style="background-color: #1A1A1A;"></span> 10 - Heavy industry</li>
       </ul>
-
-      <h5>Land cover types</h5>
+      <h5>Land Cover Types</h5>
       <ul>
         <li><span class="lcz-color-box" style="background-color: #006A00;"></span> A - Dense trees</li>
         <li><span class="lcz-color-box" style="background-color: #009900;"></span> B - Scattered trees</li>
         <li><span class="lcz-color-box" style="background-color: #B4FF00;"></span> C - Bush, scrub</li>
         <li><span class="lcz-color-box" style="background-color: #D8FF8A;"></span> D - Low plants</li>
-        <li><span class="lcz-color-box" style="background-color: #000000;"></span> E - Bare rock or paved</li>
-        <li><span class="lcz-color-box" style="background-color: #F5EEBA;"></span> F - Bare soil or sand</li>
+        <li><span class="lcz-color-box" style="background-color: #000000;"></span> E - Bare rock/paved</li>
+        <li><span class="lcz-color-box" style="background-color: #F5EEBA;"></span> F - Bare soil/sand</li>
         <li><span class="lcz-color-box" style="background-color: #7AA2F9;"></span> G - Water</li>
       </ul>
     </div>
   </div>
-  -->
 
   <div id="analysis-panel">
     <div id="panel-header">
@@ -405,95 +473,146 @@
       <span id="close-panel">&times;</span>
     </div>
     <div id="panel-content">
-      <div id="details-meta" style="margin-bottom: 10px; font-size: 13px; color: #555;">
-        Select a point to view details.
+      <div id="details-meta" style="padding: 15px; font-size: 13px; color: #666; font-style: italic;">
+        Click a point on the map to view detailed feature analysis and DDMs.
       </div>
 
-      <div class="viz-section-title">Feature Analysis</div>
-      <div id="feature-list">
-        <!-- Rows will be injected here -->
-      </div>
+      <div class="section-header">Feature Distribution</div>
 
-      <div class="viz-section-title">DDMs (Delay Doppler Maps)</div>
-      <div id="ddm-grid">
-        <div class="ddm-placeholder" id="ddm-0">DDM 1</div>
-        <div class="ddm-placeholder" id="ddm-1">DDM 2</div>
-        <div class="ddm-placeholder" id="ddm-2">DDM 3</div>
-        <div class="ddm-placeholder" id="ddm-3">DDM 4</div>
+      <table class="analysis-table">
+        <thead>
+          <tr>
+            <th class="col-name">Feature</th>
+            <th class="col-val">Value</th>
+            <th class="col-viz">Global Dist.</th>
+          </tr>
+        </thead>
+        <tbody id="feature-table-body">
+        </tbody>
+      </table>
+
+      <div class="section-header">Delay Doppler Maps (DDMs)</div>
+      <div id="ddm-container">
       </div>
     </div>
   </div>
 
   <script>
+    // --- Map Initialization ---
     const map = L.map('map', {
       boxZoom: true,
       minZoom: 2,
-      maxBounds: [
-        [-90, -180], // South-West corner
-        [90, 180]  // North-East corner
-      ]
-    }).setView([0, 0], 2);
+      worldCopyJump: true
+    }).setView([20, 0], 2);
 
-    // --- Base Map Layers ---
     const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
-      attribution: '&copy; OpenStreetMap contributors',
-      noWrap: true
-    }).addTo(map); // Add OSM by default
+      attribution: '&copy; OpenStreetMap'
+    }).addTo(map);
 
     const worldClim = L.tileLayer.wms("https://ows.worldclim.org/geoserver/wms", {
-      layers: 'wc2.1_10m_tavg', // Avg temperature
+      layers: 'wc2.1_10m_tavg',
       format: 'image/png',
       transparent: true,
+      opacity: 0.5,
       attribution: "WorldClim"
     });
 
-    const imageOverlayLayer = L.tileLayer.wms("https://lcz-generator.rub.de/tms/global-map-tiles/latest/{z}/{x}/{y}.png", {
-      interactive: true,
-      attribution: 'WUDAPT, CC-BY-SA 4.0' // Added attribution
-    }).addTo(map); // Add your image by default
+    const lczLayer = L.tileLayer.wms("https://lcz-generator.rub.de/tms/global-map-tiles/latest/{z}/{x}/{y}.png", {
+      interactive: false,
+      opacity: 0.7,
+      attribution: 'WUDAPT'
+    }).addTo(map);
 
+    const baseMaps = { "OpenStreetMap": osm };
+    const overlayMaps = { "Local Climate Zones": lczLayer, "WorldClim Temp": worldClim };
+    L.control.layers(baseMaps, overlayMaps).addTo(map);
 
+    // --- Data Management ---
     const datasetFiles = {
       raw: 'raw_features.geojson',
       shap: 'shap_features.geojson'
     };
 
-    const colorScale = chroma.scale('Spectral').mode('lab');
-    let geojsonLayer = null; // This will hold your points
+    // Mapping feature datasets to DDM datasets
+    // Mapping feature datasets to DDM datasets
+    const ddmFiles = {
+      raw: 'ddm_raw.geojson',
+      shap: 'ddm_shap.geojson'
+    };
+
+    // Color scales
+    const scaleRaw = chroma.scale('Spectral').mode('lab');
+    const scaleShap = chroma.scale(['#0074D9', '#ffffff', '#FF4136']).mode('lab');
+
+    // Red Marker Icon (Google Maps style)
+    const redIcon = new L.Icon({
+      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41]
+    });
+
+    let geojsonLayer = null;
     let geoData = null;
+    let ddmData = null; // Store DDM features
     let currentDataset = 'raw';
     let currentFeature = null;
-
-    // Cache for feature statistics
     let featureStats = {};
+    let selectedMarker = null; // Track selected point marker
 
+    // DOM Elements
     const datasetSelect = document.getElementById('datasetSelect');
     const featureSelect = document.getElementById('featureSelect');
     const colorbar = document.getElementById('colorbar');
+    const datasetNotesContainer = document.getElementById('datasetNotesContainer');
+    const datasetNotes = document.getElementById('datasetNotes');
+
     const minVal = document.getElementById('minVal');
     const maxVal = document.getElementById('maxVal');
     const opacitySlider = document.getElementById('opacitySlider');
-
-    // Analysis Panel Elements
     const analysisPanel = document.getElementById('analysis-panel');
     const closePanelBtn = document.getElementById('close-panel');
-    const featureListContainer = document.getElementById('feature-list');
+    const featureTableBody = document.getElementById('feature-table-body');
+    const detailsMeta = document.getElementById('details-meta');
+    const highlightDDMCheckbox = document.getElementById('highlightDDM');
 
+    // --- Event Listeners ---
     opacitySlider.addEventListener('input', () => {
-      const opacity = opacitySlider.value;
-      if (imageOverlayLayer) {
-        imageOverlayLayer.setOpacity(opacity);
-      }
-      if (worldClim) {
-        worldClim.setOpacity(opacity);
-      }
+      lczLayer.setOpacity(opacitySlider.value);
+      worldClim.setOpacity(opacitySlider.value);
     });
+
+    let datasetInfo = {};
+
+    // Fetch external dataset info
+    fetch('dataset_info.json')
+      .then(r => r.json())
+      .then(data => {
+        datasetInfo = data;
+        // Trigger initial update
+        datasetSelect.dispatchEvent(new Event('change'));
+      })
+      .catch(err => console.warn('Could not load dataset_info.json', err));
 
     datasetSelect.addEventListener('change', () => {
       currentDataset = datasetSelect.value;
+      datasetNotesContainer.style.display =
+        (currentDataset === 'raw' || currentDataset === 'shap') ? 'block' : 'none';
+
+      // Load text from external JSON
+      if (datasetInfo[currentDataset]) {
+        datasetNotes.value = datasetInfo[currentDataset];
+      } else {
+        datasetNotes.value = '';
+      }
+      datasetNotes.readOnly = true;
       loadDataset();
     });
+
+    datasetNotesContainer.style.display = 'block';
 
     featureSelect.addEventListener('change', () => {
       currentFeature = featureSelect.value;
@@ -502,351 +621,490 @@
 
     closePanelBtn.addEventListener('click', () => {
       analysisPanel.classList.remove('visible');
+      if (selectedMarker) {
+        map.removeLayer(selectedMarker);
+        selectedMarker = null;
+      }
     });
 
+    highlightDDMCheckbox.addEventListener('change', () => {
+      if (geojsonLayer) {
+        updateColors();
+      }
+    });
+
+    // --- Core Logic ---
+
     function loadDataset() {
-      const file = datasetFiles[currentDataset];
-      fetch(file)
-        .then(r => r.json())
-        .then(data => {
+      const featFile = datasetFiles[currentDataset];
+      const ddmFile = ddmFiles[currentDataset];
+
+      // Feedback while loading
+      minVal.textContent = "...";
+      maxVal.textContent = "...";
+      ddmData = null; // Reset DDM data
+
+      // 1. Fetch MAIN Features
+      const pFeatures = fetch(featFile).then(r => {
+        if (!r.ok) throw new Error(`Features file ${featFile} not found`);
+        return r.json();
+      });
+
+      // 2. Fetch DDM Features (Simultaneously)
+      // We catch errors here so the main map still loads even if DDM is missing
+      const pDDM = fetch(ddmFile)
+        .then(r => {
+          if (!r.ok) throw new Error(`DDM file ${ddmFile} not found`);
+          return r.json();
+        })
+        .catch(err => {
+          console.warn("DDM File loading failed (expected if file doesn't exist yet):", err);
+          return null; // Return null on failure
+        });
+
+      // Wait for both
+      Promise.all([pFeatures, pDDM])
+        .then(([data, ddmResult]) => {
+          // Handle Features
           geoData = data;
+          ddmData = ddmResult; // Store the DDM geojson (or null)
 
-          if (geojsonLayer) {
-            map.removeLayer(geojsonLayer);
-          }
+          if (geojsonLayer) map.removeLayer(geojsonLayer);
+          if (!data.features || data.features.length === 0) return;
 
+          // ... [Stats Calculation Logic matches previous] ...
           const props = data.features[0].properties;
-          // Identify numeric keys
           const numericKeys = Object.keys(props).filter(k => typeof props[k] === 'number');
 
-          // --- Pre-calculate Statistics (Min, Max, Histogram) ---
           featureStats = {};
           numericKeys.forEach(key => {
-            const values = data.features.map(f => f.properties[key]).filter(v => typeof v === 'number');
-            if (values.length === 0) return;
+            // Fix: Avoid spread operator on large arrays (causes stack overflow on 200k+ items)
+            const values = data.features.map(f => f.properties[key]);
+            // Sort values to calculate robust limits (percentiles)
+            values.sort((a, b) => a - b);
+            const count = values.length;
+            const q02 = values[Math.floor(count * 0.02)];
+            const q98 = values[Math.floor(count * 0.98)];
 
-            const min = Math.min(...values);
-            const max = Math.max(...values);
+            // Still track absolute min/max for other uses
+            const min = values[0];
+            const max = values[count - 1];
 
-            // Simple Histogram (20 bins)
+            // Use robust range for binning to avoid outlier skew
+            const robustMin = q02;
+            const robustMax = q98;
+
             const bins = 20;
-            const range = max - min;
+            const range = robustMax - robustMin;
             const binCounts = new Array(bins).fill(0);
+
+            // Calculate outliers
+            let outliersLow = 0;
+            let outliersHigh = 0;
 
             if (range > 0) {
               values.forEach(v => {
-                let binIdx = Math.floor(((v - min) / range) * bins);
-                if (binIdx >= bins) binIdx = bins - 1;
-                binCounts[binIdx]++;
+                if (v < robustMin) { outliersLow++; return; }
+                if (v > robustMax) { outliersHigh++; return; }
+
+                let idx = Math.floor(((v - robustMin) / range) * bins);
+                if (idx >= bins) idx = bins - 1;
+                binCounts[idx]++;
               });
             } else {
-              // If all values are same
-              binCounts[Math.floor(bins / 2)] = values.length;
+              binCounts[10] = values.length;
             }
 
-            // Normalize bin counts for display height (max height 1.0)
             const maxCount = Math.max(...binCounts);
-            const normBins = binCounts.map(c => maxCount > 0 ? c / maxCount : 0);
-
-            featureStats[key] = {
-              min,
-              max,
-              bins: normBins
-            };
+            const normBins = binCounts.map(c => maxCount ? c / maxCount : 0);
+            featureStats[key] = { min, max, q02, q98, bins: normBins, outliers: { low: outliersLow, high: outliersHigh } };
           });
 
-          // Populate Feature Select
+          // Update Dropdown
           featureSelect.innerHTML = "";
+          const suffix = currentDataset === "raw" ? "_raw" : "_shap";
+
+          numericKeys.sort();
           numericKeys.forEach(k => {
             const opt = document.createElement('option');
             opt.value = k;
-            opt.textContent = k + (currentDataset === "raw" ? "_raw" : "_shap");
+            opt.textContent = k + suffix;
             featureSelect.appendChild(opt);
           });
 
-          if (numericKeys.length > 0) {
+          if (!currentFeature || !featureStats[currentFeature]) {
             currentFeature = numericKeys[0];
-            featureSelect.value = currentFeature;
+          }
+          featureSelect.value = currentFeature;
+
+          // --- MATCHING LOGIC ---
+          // Use Brute Force Nearest Neighbor matching
+          // 500 DDM points x 30,000 Main points = ~15 million ops (fast enough, <100ms)
+          // This allows for matching even if coordinates are slightly offset (e.g. 1-2 degrees)
+
+          let ddmMatchCount = 0;
+          const featureToDDM = new Map();
+
+          if (ddmData && ddmData.features) {
+            const ddmFeats = ddmData.features;
+            const mainFeats = geoData.features;
+
+            ddmFeats.forEach((dFeat, dIdx) => {
+              if (!dFeat.geometry || !dFeat.geometry.coordinates) return;
+              const [dx, dy] = dFeat.geometry.coordinates;
+
+              let minDist = 5.0; // Max threshold squared (sqrt(5) ~ 2.2 degrees)
+              let bestMainIdx = -1;
+
+              for (let mIdx = 0; mIdx < mainFeats.length; mIdx++) {
+                const mFeat = mainFeats[mIdx];
+                if (!mFeat.geometry || !mFeat.geometry.coordinates) continue;
+                const [mx, my] = mFeat.geometry.coordinates;
+                const d2 = (dx - mx) ** 2 + (dy - my) ** 2;
+
+                if (d2 < minDist) {
+                  minDist = d2;
+                  bestMainIdx = mIdx;
+                }
+              }
+
+              if (bestMainIdx !== -1) {
+                featureToDDM.set(bestMainIdx, dIdx);
+                ddmMatchCount++;
+              }
+            });
           }
 
+          console.log(`Matched ${ddmMatchCount} DDM points to Main features.`);
+
+          let featureIndex = 0;
+          const myRenderer = L.canvas({ padding: 0.5 });
+
           geojsonLayer = L.geoJSON(geoData, {
-            pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
-              radius: 6,
-              color: '#333',
-              fillColor: '#888',
-              fillOpacity: 0.8,
-              weight: 1
-            }),
+            pointToLayer: (feature, latlng) => {
+              const currentIdx = featureIndex++;
+              feature.properties._featureIndex = currentIdx;
+
+              const ddmIdx = featureToDDM.get(currentIdx);
+              feature.properties._ddmIndex = ddmIdx;
+
+              return L.circleMarker(latlng, {
+                radius: 6,
+                color: '#333',
+                weight: 1,
+                fillOpacity: 0.9,
+                renderer: myRenderer
+              });
+            },
             onEachFeature: (feature, layer) => {
-              // Click handler for Sidebar
               layer.on('click', (e) => {
-                // Stop map click propagation if needed, or just open panel
                 L.DomEvent.stopPropagation(e);
-                showFeatureAnalysis(feature.properties);
+                showFeatureAnalysis(feature.properties, feature.geometry.coordinates);
               });
             }
           }).addTo(map);
 
-          if (layerControl) {
-            // Remove old layer if exists in control - tricky with Leaflet default control
-            // Better to just add it. If we need to remove, we'd need a reference.
-            // For now, simpler to just add (might duplicate in list if switching back and forth unless handled).
-            // Since we cleared geojsonLayer from map, just adding it again is "okay" but not clean. 
-            // In a pro app, we'd manage the control instance better.
-          }
-
-          map.fitBounds(geojsonLayer.getBounds());
           updateColors();
+
+          if (highlightDDMCheckbox.checked) {
+            highlightDDMCheckbox.dispatchEvent(new Event('change'));
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          // alert(`Error loading data. See console for details.`);
         });
     }
 
     function updateColors() {
       if (!geojsonLayer || !currentFeature || !featureStats[currentFeature]) return;
 
-      const { min, max } = featureStats[currentFeature];
+      const { min, max, q02, q98 } = featureStats[currentFeature];
+      // Show robust limits in legend
+      minVal.textContent = q02.toFixed(4);
+      maxVal.textContent = q98.toFixed(4);
 
-      minVal.textContent = min.toFixed(2);
-      maxVal.textContent = max.toFixed(2);
+      const activeScale = currentDataset === 'shap' ? scaleShap : scaleRaw;
+
+      // Use robust limits for domain
+      const domain = currentDataset === 'shap'
+        ? [-Math.max(Math.abs(q02), Math.abs(q98)), Math.max(Math.abs(q02), Math.abs(q98))]
+        : [q02, q98];
 
       geojsonLayer.eachLayer(layer => {
         const val = layer.feature.properties[currentFeature];
-        if (typeof val === "number" && !isNaN(val)) {
-          // Normalize 0-1
-          let t = 0.5;
-          if (max !== min) {
-            t = (val - min) / (max - min);
-          }
-          const color = colorScale(t).hex();
-          layer.setStyle({ color: '#333', fillColor: color });
+        let color;
+
+        let t;
+        if (currentDataset === 'shap') {
+          const domMax = domain[1];
+          // Clamp value
+          let v = val;
+          if (v < -domMax) v = -domMax;
+          if (v > domMax) v = domMax;
+          t = (v + domMax) / (2 * domMax);
         } else {
-          layer.setStyle({ color: '#ccc', fillColor: '#ccc' });
+          // Clamp value
+          let v = val;
+          if (v < q02) v = q02;
+          if (v > q98) v = q98;
+          t = (q98 === q02) ? 0.5 : (v - q02) / (q98 - q02);
         }
+        color = activeScale(t).hex();
+
+        // Preserve highlight style during color update
+        const isHighlight = highlightDDMCheckbox.checked;
+        const hasDDM = layer.feature.properties._ddmIndex !== undefined;
+
+        let alpha = opacitySlider.value;
+        let radius = 6;
+        let stroke = false;
+        let weight = 1;
+        let borderColor = '#333';
+
+        if (isHighlight) {
+          if (hasDDM) {
+            alpha = 1.0;
+            radius = 10;
+            stroke = true;
+            weight = 2;
+            borderColor = '#00FFFF'; // Cyan highlight
+            layer.bringToFront();
+          } else {
+            alpha = 0.1;
+            radius = 3;
+          }
+        }
+
+        layer.setStyle({
+          fillColor: color,
+          fillOpacity: alpha,
+          radius: radius,
+          stroke: stroke,
+          color: borderColor,
+          weight: weight
+        });
       });
 
-      // Update Legend Bar
+      const ctx = document.createElement('canvas').getContext('2d');
       const gradient = [];
-      for (let i = 0; i <= 100; i += 5) {
-        gradient.push(colorScale(i / 100).hex());
+      for (let i = 0; i <= 20; i++) {
+        const t = i / 20;
+        gradient.push(activeScale(t).hex());
       }
       colorbar.style.background = `linear-gradient(to right, ${gradient.join(',')})`;
     }
 
-    function showFeatureAnalysis(properties) {
+    function showFeatureAnalysis(properties, coords) {
       analysisPanel.classList.add('visible');
-      featureListContainer.innerHTML = '';
 
-      const numericKeys = Object.keys(properties).filter(k => typeof properties[k] === 'number');
+      // Update Red Marker
+      if (selectedMarker) {
+        map.removeLayer(selectedMarker);
+      }
+      // Note: coords are [lng, lat] (GeoJSON), Leaflet needs [lat, lng]
+      const latLng = [coords[1], coords[0]];
+      selectedMarker = L.marker(latLng, { icon: redIcon, zIndexOffset: 1000 }).addTo(map);
 
-      // Sorting: Highest to Lowest (Descending)
-      numericKeys.sort((a, b) => {
-        const valA = properties[a];
-        const valB = properties[b];
-        return valB - valA; // Descending
-      });
+      const ddmIdx = properties._ddmIndex; // Get linked index
+      const featureIdx = properties._featureIndex;
+
+      detailsMeta.innerHTML = `
+        <strong>Coordinates:</strong> ${coords[1].toFixed(4)}, ${coords[0].toFixed(4)} <br>
+        <strong>Dataset:</strong> ${currentDataset.toUpperCase()} Values <br>
+        <strong>DDM Available:</strong> ${ddmIdx !== undefined ? 'Yes' : 'No'}
+      `;
+
+      featureTableBody.innerHTML = '';
+      const ddmContainer = document.getElementById('ddm-container');
+      ddmContainer.innerHTML = ''; // Clear previous
+
+      // --- 1. Populate Table (Same as before) ---
+      const numericKeys = Object.keys(properties).filter(k => typeof properties[k] === 'number' && !k.startsWith('_'));
+      numericKeys.sort((a, b) => Math.abs(properties[b]) - Math.abs(properties[a]));
 
       numericKeys.forEach(key => {
         const val = properties[key];
         const stats = featureStats[key];
         if (!stats) return;
 
-        const row = document.createElement('div');
-        row.className = 'feature-row';
+        const tr = document.createElement('tr');
+        const tdName = document.createElement('td');
+        tdName.className = 'col-name';
+        tdName.textContent = key + (currentDataset === 'raw' ? '_raw' : '_shap');
+        tr.appendChild(tdName);
 
-        // Label
-        const label = document.createElement('div');
-        label.className = 'feature-label';
-        label.title = key;
-        label.textContent = key;
-        row.appendChild(label);
+        const tdVal = document.createElement('td');
+        tdVal.className = 'col-val';
+        tdVal.textContent = val.toFixed(4);
+        tr.appendChild(tdVal);
 
-        const vizContainer = document.createElement('div');
-        vizContainer.className = 'feature-viz-container';
+        const tdViz = document.createElement('td');
+        tdViz.className = 'col-viz';
+        const vizCont = document.createElement('div');
+        vizCont.className = 'viz-container';
 
-        // VISUALIZATION LOGIC
-        if (currentDataset === 'shap') {
-          // SHAP: Value + Diverging Bar + Histogram
-
-          // 1. Text Value (Overlay or separate? Let's put slightly left or formatted)
-          // Let's rely on hover for exact value? Or put it in text.
-          // Plan said: Value + Bar + Hist.
-          // Let's put value text in the bar part? Or before?
-          // The generic layout "feature-row" has fix height. 
-          // Let's create specific inner structure.
-
-          /* Structure:
-             [ValString] [Bar] | [Hist]
-          */
-
-          // Value Text
-          const valDiv = document.createElement('div');
-          valDiv.style.width = '50px';
-          valDiv.style.fontSize = '11px';
-          valDiv.style.textAlign = 'right';
-          valDiv.style.marginRight = '8px';
-          valDiv.textContent = val.toFixed(3);
-          vizContainer.appendChild(valDiv);
-
-          // Bar Container
-          const barContainer = document.createElement('div');
-          barContainer.style.flexGrow = '1';
-          barContainer.style.height = '100%';
-          barContainer.style.position = 'relative';
-          barContainer.style.background = '#f9f9f9';
-          barContainer.style.marginRight = '5px';
-          barContainer.style.display = 'flex';
-          barContainer.style.alignItems = 'center'; // Center bar vertically
-
-          // Draw Diverging Bar
-          // We need global max absolute value to normalize properly across features? 
-          // Or normalize per feature range? SHAP usually compares contribution relative to others.
-          // But here we are listing features. Usually SHAP waterfall normalizes by total prediction.
-          // Since we barely have that context, let's normalize by THIS feature's MaxAbs in the dataset.
-          const maxAbs = Math.max(Math.abs(stats.min), Math.abs(stats.max));
-          const normVal = maxAbs > 0 ? val / maxAbs : 0; // -1 to 1
-
+        const { min, max, q02, q98, bins } = stats;
+        bins.forEach(h => {
           const bar = document.createElement('div');
-          bar.style.height = '10px'; // Reduced height
-          bar.style.position = 'absolute';
-          // bar.style.top = '50%'; // Handled by flex align-items center in container
-          // bar.style.transform = 'translateY(-50%)';
+          bar.className = 'hist-bar';
+          bar.style.height = (h * 100) + '%';
+          // Highlight outlier bars? No, keep simple.
+          if (currentDataset === 'shap') bar.style.backgroundColor = '#ccc';
+          vizCont.appendChild(bar);
+        });
 
-          // Center line is 50% of container
-          const centerP = 50;
-          // If neg, goes left from center. If pos, goes right.
-          // Scale: Full width = 2 * maxAbs.
-          // Let's say width is 100%. 50% is 0.
-          // Val mapped to %: 50 + (val/maxAbs)*50 (roughly, maybe *45 to keep padding)
+        const marker = document.createElement('div');
+        marker.className = 'val-marker';
 
-          const percent = 50 + (normVal * 45); // 5% to 95% range
+        // Use robust range for marker position but allow overshooting (clamped visually)
+        const robustMin = q02;
+        const robustMax = q98;
+        const range = robustMax - robustMin;
 
-          let left, width;
-          if (normVal >= 0) {
-            left = 50;
-            width = normVal * 45;
-            bar.style.background = '#0074D9'; // Blue
-          } else {
-            left = percent;
-            width = Math.abs(normVal) * 45;
-            bar.style.background = '#FF4136'; // Red
+        let pct = 50;
+        if (range !== 0) pct = ((val - robustMin) / range) * 100;
+
+        // Marker indicates robust range pos, <0 or >100 is outlier
+        if (pct < 0) pct = 0; // Stick to left edge
+        if (pct > 100) pct = 100; // Stick to right edge
+
+        marker.style.left = pct + '%';
+
+        if (currentDataset === 'shap') {
+          marker.style.background = val >= 0 ? '#FF4136' : '#0074D9';
+          marker.style.width = '3px';
+        }
+        vizCont.appendChild(marker);
+        tdViz.appendChild(vizCont);
+        tr.appendChild(tdViz);
+        featureTableBody.appendChild(tr);
+      });
+
+      // --- 2. DDM Rendering ---
+      const ddmNames = ['DDM BRCS', 'DDM Power Analog', 'DDM Raw Counts', 'DDM Eff. Scatter'];
+
+      // Check if we have DDM data loaded and if the index is valid
+      let hasDDM = false;
+      let ddmValues = [];
+
+      if (ddmData && ddmIdx !== undefined && ddmData.features[ddmIdx]) {
+        // Look for 'ddm_values' property (created by Python script)
+        const props = ddmData.features[ddmIdx].properties;
+        if (props && props.ddm_values) {
+          ddmValues = props.ddm_values;
+          hasDDM = true;
+        }
+      }
+
+      ddmNames.forEach((name, i) => {
+        const box = document.createElement('div');
+        box.className = 'ddm-box';
+
+        const title = document.createElement('div');
+        title.className = 'ddm-box-title';
+        title.textContent = name;
+        box.appendChild(title);
+
+        if (hasDDM) {
+          // SLICE data for this specific DDM
+          // Total 748 points. 4 DDMs. 187 points per DDM.
+          // Shape 17 rows (height), 11 cols (width).
+          const valuesPerDDM = 187;
+          const start = i * valuesPerDDM;
+          const end = start + valuesPerDDM;
+          const slice = ddmValues.slice(start, end);
+
+          // Check if slice has data
+          if (slice.length < valuesPerDDM) {
+            const errDiv = document.createElement('div');
+            errDiv.textContent = "Incomplete Data";
+            errDiv.className = 'ddm-placeholder-art';
+            box.appendChild(errDiv);
+            ddmContainer.appendChild(box);
+            return;
           }
 
-          bar.style.left = left + '%';
-          bar.style.width = width + '%';
+          // --- CANVAS IMPLEMENTATION ---
+          // 11x17 logical pixels
+          const canvas = document.createElement('canvas');
+          canvas.width = 11;
+          canvas.height = 17;
 
-          // Center marker
-          const centerLine = document.createElement('div');
-          centerLine.style.position = 'absolute';
-          centerLine.style.left = '50%';
-          centerLine.style.top = '0';
-          centerLine.style.bottom = '0';
-          centerLine.style.width = '1px';
-          centerLine.style.background = '#ddd';
+          // CSS handles the scaling to the box size (approx 100-150px)
 
-          barContainer.appendChild(centerLine);
-          barContainer.appendChild(bar);
-          vizContainer.appendChild(barContainer);
+          box.appendChild(canvas);
 
-          // Histogram Part
-          const histDiv = createHistogram(stats, val);
-          vizContainer.appendChild(histDiv);
+          const ctx = canvas.getContext('2d');
+
+          // Determine color scale and domain
+          const activeScale = currentDataset === 'shap' ? scaleShap : scaleRaw;
+          let domain = [0, 1];
+          if (featureStats[currentFeature]) {
+            const { q02, q98 } = featureStats[currentFeature];
+            domain = currentDataset === 'shap'
+              ? [-Math.max(Math.abs(q02), Math.abs(q98)), Math.max(Math.abs(q02), Math.abs(q98))]
+              : [q02, q98];
+          }
+
+          // Draw pixels 1x1
+          // Data is assumed row-major: Top row (0), then next row...
+          // Index 0..10 -> Row 0, Cols 0..10
+          for (let r = 0; r < 17; r++) {
+            for (let c = 0; c < 11; c++) {
+              const val = slice[r * 11 + c];
+
+              if (val === undefined) continue;
+
+              // Color Mapping
+              let t;
+              if (currentDataset === 'shap') {
+                const domMax = domain[1];
+                let v = val;
+                if (v < -domMax) v = -domMax;
+                if (v > domMax) v = domMax;
+                t = (v + domMax) / (2 * domMax);
+              } else {
+                let v = val;
+                const dMin = domain[0];
+                const dMax = domain[1];
+                if (v < dMin) v = dMin;
+                if (v > dMax) v = dMax;
+                t = (dMax === dMin) ? 0.5 : (v - dMin) / (dMax - dMin);
+              }
+
+              ctx.fillStyle = activeScale(t).hex();
+              ctx.fillRect(c, r, 1, 1);
+            }
+          }
 
         } else {
-          // RAW: Value Only (User said "just the value", but previously "histogram for each data point"...)
-          // User said: "for the raw features, just the value"
-          // So strict adherence: Just render the value.
-
-          const valDiv = document.createElement('div');
-          valDiv.style.flexGrow = '1';
-          valDiv.style.fontWeight = 'bold';
-          valDiv.style.fontSize = '12px';
-          valDiv.style.paddingLeft = '10px';
-          valDiv.textContent = val.toFixed(4);
-          vizContainer.appendChild(valDiv);
+          // Fallback Placeholder
+          const art = document.createElement('div');
+          art.className = 'ddm-placeholder-art';
+          art.innerHTML = 'No DDM Data';
+          box.appendChild(art);
         }
 
-        row.appendChild(vizContainer);
-        featureListContainer.appendChild(row);
+        ddmContainer.appendChild(box);
       });
     }
 
-    function createHistogram(stats, currentVal) {
-      const histContainer = document.createElement('div');
-      histContainer.className = 'viz-hist-part';
-      // Only if defined in CSS, otherwise define style here
-      histContainer.style.width = '30%'; // Reduced as per SHAP row logic
-      histContainer.style.position = 'relative';
-      histContainer.style.height = '100%';
-      histContainer.style.marginLeft = '5px';
-      histContainer.style.borderLeft = '1px solid #eee';
-      histContainer.style.display = 'flex';
-      histContainer.style.alignItems = 'flex-end';
-      histContainer.style.paddingBottom = '4px';
+    // LCZ Legend Toggle
+    const lczToggle = document.getElementById('lcz-legend-toggle');
+    const lczContent = document.getElementById('lcz-legend-content');
+    let isLczVisible = true;
 
-      const { min, max, bins } = stats;
-      const binCount = bins.length;
-
-      // Render bars
-      bins.forEach((h, i) => {
-        const bar = document.createElement('div');
-        bar.style.flex = '1';
-        bar.style.margin = '0 1px';
-        bar.style.background = '#ccc';
-        bar.style.height = (h * 100) + '%';
-        histContainer.appendChild(bar);
-      });
-
-      // Current Value Marker Line
-      // Position?
-      const range = max - min;
-      if (range > 0) {
-        let pos = (currentVal - min) / range;
-        if (pos < 0) pos = 0;
-        if (pos > 1) pos = 1;
-
-        const line = document.createElement('div');
-        line.style.position = 'absolute';
-        line.style.left = (pos * 100) + '%';
-        line.style.top = '0';
-        line.style.bottom = '0';
-        line.style.width = '2px';
-        line.style.background = 'black'; // Highlight
-        line.style.zIndex = '10';
-        histContainer.appendChild(line);
-      }
-
-      return histContainer;
-    }
-
-    const baseMaps = {
-      "OpenStreetMap": osm
-    };
-
-    const overlayMaps = {
-      "Local Climate Zones": imageOverlayLayer, // Renamed for clarity
-      "WorldClim Temp": worldClim,
-    };
-
-    const layerControl = L.control.layers(baseMaps, overlayMaps).addTo(map);
-
-    const lczLegendToggle = document.getElementById('lcz-legend-toggle');
-    const lczLegendContent = document.getElementById('lcz-legend-content');
-    let lczLegendVisible = true; // State variable
-
-    lczLegendToggle.addEventListener('click', () => {
-      if (lczLegendVisible) {
-        lczLegendContent.style.display = 'none';
-        lczLegendToggle.textContent = 'Local Climate Zones (Click to Show)';
-      } else {
-        lczLegendContent.style.display = 'block';
-        lczLegendToggle.textContent = 'Local Climate Zones (Click to Hide)';
-      }
-      lczLegendVisible = !lczLegendVisible; // Toggle state
+    lczToggle.addEventListener('click', () => {
+      isLczVisible = !isLczVisible;
+      lczContent.style.display = isLczVisible ? 'block' : 'none';
+      lczToggle.textContent = isLczVisible ? 'Local Climate Zones (Hide)' : 'Local Climate Zones (Show)';
     });
 
     // Initial Load
     loadDataset();
+
   </script>
 </body>
 
 </html>
-```
