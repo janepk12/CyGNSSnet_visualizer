@@ -1031,21 +1031,28 @@
           canvas.width = 11;
           canvas.height = 17;
 
-          // CSS handles the scaling to the box size (approx 100-150px)
-
           box.appendChild(canvas);
 
           const ctx = canvas.getContext('2d');
 
           // Determine color scale and domain
-          const activeScale = currentDataset === 'shap' ? scaleShap : scaleRaw;
-          let domain = [0, 1];
-          if (featureStats[currentFeature]) {
-            const { q02, q98 } = featureStats[currentFeature];
-            domain = currentDataset === 'shap'
-              ? [-Math.max(Math.abs(q02), Math.abs(q98)), Math.max(Math.abs(q02), Math.abs(q98))]
-              : [q02, q98];
+          // For DDM, user requested 'viridis' (continuous) to show values.
+          // We calculate local Min/Max for THIS specific DDM slice to maximize contrast.
+          let localMin = Infinity;
+          let localMax = -Infinity;
+
+          for (let k = 0; k < slice.length; k++) {
+            if (slice[k] < localMin) localMin = slice[k];
+            if (slice[k] > localMax) localMax = slice[k];
           }
+
+          // If flat, pad slightly
+          if (localMax === localMin) {
+            localMax += 0.0001;
+          }
+
+          // Use Viridis scale
+          const ddmScale = chroma.scale('viridis').domain([localMin, localMax]);
 
           // Draw pixels 1x1
           // Data is assumed row-major: Top row (0), then next row...
@@ -1056,24 +1063,7 @@
 
               if (val === undefined) continue;
 
-              // Color Mapping
-              let t;
-              if (currentDataset === 'shap') {
-                const domMax = domain[1];
-                let v = val;
-                if (v < -domMax) v = -domMax;
-                if (v > domMax) v = domMax;
-                t = (v + domMax) / (2 * domMax);
-              } else {
-                let v = val;
-                const dMin = domain[0];
-                const dMax = domain[1];
-                if (v < dMin) v = dMin;
-                if (v > dMax) v = dMax;
-                t = (dMax === dMin) ? 0.5 : (v - dMin) / (dMax - dMin);
-              }
-
-              ctx.fillStyle = activeScale(t).hex();
+              ctx.fillStyle = ddmScale(val).hex();
               ctx.fillRect(c, r, 1, 1);
             }
           }
